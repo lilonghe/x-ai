@@ -2,7 +2,7 @@ import { Bubble, Sender, useXAgent, useXChat, XRequest } from "@ant-design/x";
 import { GetProp } from "antd";
 import markdownit from 'markdown-it';
 import { useState } from "react";
-import { IOpenAIStreamResponse } from "../interface";
+import { IMessage, IOpenAIStreamResponse } from "../interface";
 
 const md = markdownit({ html: true, breaks: true });
 
@@ -25,10 +25,10 @@ const { create } = XRequest({
   model: import.meta.env['VITE_AI_MODEL'],
 });
 
-export default function Chat() {
+export default function Chat({ defaultMessages, onChatDone }: { defaultMessages: IMessage[], onChatDone: (messages: IMessage[]) => void }) {
   const [userInput, setUserInput] = useState<string>()
 
-  const [agent] = useXAgent<{ role: string, content: string }>({
+  const [agent] = useXAgent<IMessage>({
     request: async (info, callbacks) => {
       const { message, messages = [] } = info;
       const { onUpdate, onSuccess } = callbacks;
@@ -55,6 +55,7 @@ export default function Chat() {
             },
             onUpdate: (chunk) => {
               if (chunk.data.includes('[DONE]')) {
+                onChatDone([...messages, content])
                 onSuccess(content)
                 return;
               }
@@ -72,16 +73,7 @@ export default function Chat() {
 
   const { messages, onRequest } = useXChat({ 
     agent, 
-    defaultMessages: [
-      {
-        id: 'init',
-        message: {
-          role: 'assistant',
-          content: '你好，有什么我可以帮你的吗？',
-        },
-        status: 'success',
-      },
-    ], 
+    defaultMessages: defaultMessages.map(item => ({ message: item })),
   })
 
   const items = messages.map(({ message, id }) => ({
@@ -90,8 +82,8 @@ export default function Chat() {
     role: message.role,
   }));
 
-  return <div style={{ maxWidth: 800, margin: 'auto', padding: 20 }}>
-    <Bubble.List roles={roles} items={items} />
+  return <div className="flex-1">
+    <Bubble.List roles={roles} items={items} className="h-[calc(100vh-120px)]" />
     <Sender 
       onSubmit={msg => onRequest({ role: 'user', content: msg })}
       loading={agent.isRequesting()} 
