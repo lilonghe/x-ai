@@ -1,6 +1,6 @@
 import { Spin } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
-import './App.css'
+import './app.css'
 import Chat from './chat'
 import Conversation from './conversation'
 import { createChatData, deleteChat, getAllChatData, saveChatMessageData } from './db'
