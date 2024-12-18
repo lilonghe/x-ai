@@ -38,7 +38,11 @@ export type ChatType = GetProp<ConversationsProps, 'items'>[0] & {
 }
 
 export interface IMessage {
-  content: string
+  content: string | {
+    type?: string
+    image_url?: string
+    text?: string
+  }[]
   // 'user' | 'assistant'
   role: string
 }

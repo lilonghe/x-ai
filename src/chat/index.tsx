@@ -1,8 +1,10 @@
-import { Bubble, Sender, useXAgent, useXChat, XRequest } from "@ant-design/x";
-import { GetProp } from "antd";
+import { LinkOutlined } from "@ant-design/icons";
+import { Attachments, Bubble, Sender, useXAgent, useXChat, XRequest } from "@ant-design/x";
+import { Button, GetProp } from "antd";
 import markdownit from 'markdown-it';
 import { useState } from "react";
 import { IMessage, IOpenAIStreamResponse } from "../interface";
+import { convertFileToBase64 } from "../utils";
 
 const md = markdownit({ html: true, breaks: true });
 
@@ -78,9 +80,23 @@ export default function Chat({ defaultMessages, onChatDone }: { defaultMessages:
 
   const items = messages.map(({ message, id }) => ({
     key: id,
-    content: <div dangerouslySetInnerHTML={{ __html: md.render(message.content) }} />,
+    content: typeof message.content === 'string' ? <div dangerouslySetInnerHTML={{ __html: md.render(message.content) }} /> : <div>
+      {message.content.map((item, i) => <div key={i}>
+        {item.type === 'text' ? <div dangerouslySetInnerHTML={{ __html: md.render(item.text || '') }} /> : <img src={item.image_url} className="max-w-[200px] max-h-[200px]" />}
+      </div>)}
+    </div>,
     role: message.role,
   }));
+
+  const handleUploadImage = async (file: File) => {
+    const base64 = await convertFileToBase64(file)
+    onRequest({ role: 'user', content: [
+      {
+        type: 'image_url',
+        image_url: base64,
+      }
+    ] })
+  }
 
   return <div className="flex-1">
     <Bubble.List roles={roles} items={items} className="h-[calc(100vh-120px)]" />
@@ -90,6 +106,11 @@ export default function Chat({ defaultMessages, onChatDone }: { defaultMessages:
       value={userInput}
       onChange={setUserInput}
       placeholder="发送聊天内容" 
-      style={{ marginTop: 20 }} />  
+      style={{ marginTop: 20 }}
+      prefix={<Attachments
+        accept="image/*"
+        beforeUpload={handleUploadImage}>
+          <Button type="text" icon={<LinkOutlined />} />
+        </Attachments>} />  
   </div>
 }
