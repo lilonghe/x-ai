@@ -1,12 +1,23 @@
 import { LinkOutlined } from "@ant-design/icons";
 import { Attachments, Bubble, Sender, useXAgent, useXChat, XRequest } from "@ant-design/x";
 import { Button, GetProp } from "antd";
+import hljs from "highlight.js";
+import 'highlight.js/styles/atom-one-light.min.css';
 import markdownit from 'markdown-it';
 import { useState } from "react";
 import { IMessage, IOpenAIStreamResponse } from "../interface";
 import { convertFileToBase64 } from "../utils";
+import './index.css';
 
-const md = markdownit({ html: true, breaks: true });
+const md = markdownit({ html: true, breaks: true,
+  highlight: function (str, lang) {
+    lang = hljs.getLanguage(lang) ? lang : 'html'
+    try {
+      return '<pre class="hljs p-1 my-1 rounded"><code>' + hljs.highlight(str, { language: lang }).value + '</code></pre>';;
+    } catch (__) {}
+    return ``; 
+  },
+});
 
 const roles: GetProp<typeof Bubble.List, 'roles'> = {
   user: {
