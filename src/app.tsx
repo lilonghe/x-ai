@@ -1,10 +1,19 @@
-import { Spin } from 'antd'
+import LogtoClient from '@logto/browser'
+import { Button, Spin } from 'antd'
+import { createRemoteJWKSet, jwtVerify } from 'jose'
 import { useEffect, useMemo, useState } from 'react'
 import './app.css'
 import Chat from './chat'
 import Conversation from './conversation'
 import { createChatData, deleteChat, getAllChatData, saveChatMessageData } from './db'
 import { ChatType, IMessage } from './interface'
+
+const logtoClient = new LogtoClient({
+  endpoint: 'http://localhost:3001/',
+  appId: 'rfb5daimf4vpg3ntvwt8y',
+  scopes: ['read:resource'],
+  resources: ['http://localhost:8080']
+});
 
 function App() {
   const [chatList, setChatList] = useState<ChatType[]>([])
@@ -30,8 +39,44 @@ function App() {
     setActiveKey(data[0].key)
   }
 
+  const signIn = async () => {
+    await logtoClient.handleSignInCallback(window.location.href)
+    window.location.href = '/';
+    getInfo();
+  }
+  const getInfo = async () => {
+    
+    const userInfo = await logtoClient.getIdTokenClaims();
+    const token = await logtoClient.getAccessToken('http://localhost:8080')
+
+    const jwks = createRemoteJWKSet(new URL('http://localhost:3001/oidc/jwks'));
+    const { payload } = await jwtVerify(token, jwks)
+  
+    console.log(userInfo, token, payload)
+  }
+
+  const logout = () => {
+    logtoClient.signOut()
+  }
+
   useEffect(() => {
     loadChatList()
+
+    if (window.location.pathname === '/callback') {
+      signIn()
+    } else {
+      logtoClient.isAuthenticated().then(isAuth => {
+        if (isAuth) {
+          getInfo()
+        } else {
+          logtoClient.signIn('http://localhost:5173/callback');
+        }
+      })
+    }
+
+    
+
+    
   }, [])
 
   const defaultMessages = useMemo(() => {
@@ -79,6 +124,7 @@ function App() {
 
   return (
     <div className='flex container mx-auto py-5'>
+      <Button onClick={logout}>Logout</Button>
       <Conversation 
         chats={chatList} 
         activeKey={activeKey} 
